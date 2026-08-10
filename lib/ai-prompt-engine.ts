@@ -23,6 +23,8 @@ export interface GeneratedConcept {
   color_palette: string[];
   /** Referensi teknik/gaya desain nyata, mis. "risograph print", "swiss grid" */
   style_reference: string;
+  /** Elemen dari gambar referensi yang diadaptasi — null jika tidak ada gambar */
+  image_inspiration: string | null;
 }
 
 export interface GenerateConceptResponse {
@@ -49,6 +51,16 @@ export const CONCEPT_SYSTEM_PROMPT = `Kamu adalah seorang art director senior di
 TUGAS:
 Berikan 3–5 konsep desain grafis alternatif berdasarkan brief yang diberikan. Tiap konsep harus terasa BERBEDA satu sama lain — bukan variasi tipis dari satu ide yang sama.
 
+JIKA ADA GAMBAR REFERENSI:
+Analisis gambar tersebut secara mendalam dan ekstrak:
+1. PALET WARNA — identifikasi warna dominan, aksen, dan hubungan antar warna
+2. KOMPOSISI — bagaimana elemen disusun (simetri/asimetri, rule of thirds, focal point)
+3. MOOD & ATMOSFER — perasaan yang ditimbulkan gambar
+4. TEKSTUR & MEDIUM — apakah ada grain, paper texture, brush stroke, atau teknik cetak tertentu
+5. REFERENSI GAYA — gambar ini mengingatkan ke teknik/era desain apa?
+
+Gunakan temuan analisis ini sebagai INSPIRASI — bukan template yang dikopi mentah. Adaptasikan ke konteks brief, bukan salin persis.
+
 ATURAN KONSEP YANG BAIK:
 1. Setiap konsep harus punya ARAH VISUAL yang jelas dan spesifik — bukan deskripsi ambigu seperti "modern dan clean".
 2. Referensikan teknik desain nyata: risograph print, swiss international typographic style, cut-paper collage, woodblock print, halftone offset, bauhaus grid, editorial magazine layout, Japanese retro advertising, dll.
@@ -64,10 +76,14 @@ Kembalikan HANYA JSON valid (tanpa markdown, tanpa backtick, tanpa komentar), de
       "title": "Nama konsep singkat (3–6 kata)",
       "description": "Deskripsi gaya visual 2–3 kalimat. Harus menyebutkan: komposisi utama, mood/atmosfer, dan elemen visual yang paling khas dari konsep ini.",
       "color_palette": ["#HEXCODE", "#HEXCODE", "#HEXCODE", "#HEXCODE"],
-      "style_reference": "Satu referensi teknik/gaya desain spesifik (contoh: 'risograph two-color print', 'swiss grid typography', 'japanese retro poster 1970s')"
+      "style_reference": "Satu referensi teknik/gaya desain spesifik (contoh: 'risograph two-color print', 'swiss grid typography', 'japanese retro poster 1970s')",
+      "image_inspiration": null
     }
   ]
 }
+
+JIKA ADA GAMBAR REFERENSI, isi field "image_inspiration" dengan 1 kalimat singkat yang menyebutkan elemen spesifik apa dari gambar yang diadaptasi ke konsep ini. Contoh: "Palet earth tone warm dari gambar referensi diadaptasi menjadi dominasi sienna dan krem dengan aksen teal."
+JIKA TIDAK ADA GAMBAR, biarkan "image_inspiration" bernilai null.
 
 PENTING:
 - color_palette harus berisi 3–5 hex code valid (format #RRGGBB)
@@ -170,6 +186,10 @@ export function parseConceptResponse(raw: string): GenerateConceptResponse {
       description: concept.description.trim(),
       color_palette: palette,
       style_reference: concept.style_reference.trim(),
+      image_inspiration:
+        typeof concept.image_inspiration === "string" && concept.image_inspiration.trim()
+          ? concept.image_inspiration.trim()
+          : null,
     };
   });
 

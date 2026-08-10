@@ -17,7 +17,7 @@ import type { ChipColor } from "@/components/ui/chip";
 // ---------------------------------------------------------------------------
 
 interface HistoryItem {
-  id: string;                 // saved_history.id
+  id: string;
   is_favorite: boolean;
   created_at: string;
   prompt_id: string;
@@ -35,6 +35,7 @@ interface HistoryItem {
         id: string;
         design_type: string;
         topic: string;
+        reference_image_url: string | null;
       };
     };
   };
@@ -360,6 +361,25 @@ export default function HistoryClient() {
                   >
                     {item.generated_prompts.platform_target === "midjourney" ? "Midjourney" : "ChatGPT"}
                   </span>
+
+                  {/* Thumbnail gambar referensi — hanya tampil kalau ada */}
+                  {request.reference_image_url && (
+                    <div className="mt-2 flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={request.reference_image_url}
+                        alt="Gambar referensi"
+                        className="w-8 h-8 rounded-[5px] object-cover flex-shrink-0"
+                        style={{ border: "1px solid rgba(26,26,46,0.12)" }}
+                      />
+                      <span
+                        className="text-[10px] leading-snug"
+                        style={{ color: "rgba(26,26,46,0.45)", fontFamily: "var(--font-poppins)" }}
+                      >
+                        Pakai gambar referensi
+                      </span>
+                    </div>
+                  )}
                 </SwatchCard>
 
                 {/* Overlay actions — favorite + delete

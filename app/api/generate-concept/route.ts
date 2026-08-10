@@ -25,6 +25,8 @@ export interface GenerateConceptRequest {
   brief: BriefFormValues;
   /** Request ID lama jika ini adalah "Generate Ulang" — untuk overwrite */
   existingRequestId?: string;
+  /** URL public gambar referensi (sudah diupload ke Supabase Storage) */
+  referenceImageUrl?: string | null;
 }
 
 export interface GenerateConceptSuccess {
@@ -35,6 +37,7 @@ export interface GenerateConceptSuccess {
     description: string;
     color_palette: string[];
     style_reference: string;
+    image_inspiration: string | null;
   }>;
 }
 
@@ -61,7 +64,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { brief, existingRequestId } = body;
+  const { brief, existingRequestId, referenceImageUrl } = body;
 
   // 2. Validasi brief (repakai fungsi yang sama dengan client)
   const validationErrors = validateBriefForm(brief);
@@ -91,6 +94,7 @@ export async function POST(req: NextRequest) {
           target_audience: brief.target_audience?.trim() || null,
           color_preference: brief.color_preference?.trim() || null,
           extra_notes: brief.extra_notes?.trim() || null,
+          reference_image_url: referenceImageUrl ?? null,
         })
         .eq("id", existingRequestId)
         .select("id")
@@ -116,6 +120,7 @@ export async function POST(req: NextRequest) {
           target_audience: brief.target_audience?.trim() || null,
           color_preference: brief.color_preference?.trim() || null,
           extra_notes: brief.extra_notes?.trim() || null,
+          reference_image_url: referenceImageUrl ?? null,
         })
         .select("id")
         .single();
@@ -134,16 +139,70 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 4. Panggil AI
+  // 4. Panggil AI — kalau ada gambar referensi, pakai Gemini multimodal
   let rawAIResponse: string;
   try {
     const userPrompt = buildUserPrompt(brief);
-    const result = await callAI({
-      systemPrompt: CONCEPT_SYSTEM_PROMPT,
-      userPrompt,
-      maxTokens: 2048,
-    });
-    rawAIResponse = result.text;
+
+    if (referenceImageUrl && process.env.GEMINI_API_KEY) {
+      // Fetch gambar dari Supabase Storage, convert ke base64
+      const imgRes = await fetch(referenceImageUrl);
+      if (!imgRes.ok) throw new Error(`Gagal fetch gambar referensi: ${imgRes.status}`);
+      const imgBuffer = await imgRes.arrayBuffer();
+      const imgBase64 = Buffer.from(imgBuffer).toString("base64");
+      const imgMimeType = imgRes.headers.get("content-type") ?? "image/jpeg";
+
+      // Gemini multimodal: kirim teks + gambar sekaligus
+      const apiKey = process.env.GEMINI_API_KEY;
+      const model = "gemini-2.0-flash";
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const geminiRes = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: CONCEPT_SYSTEM_PROMPT }] },
+          contents: [{
+            role: "user",
+            parts: [
+              {
+                inline_data: {
+                  mime_type: imgMimeType,
+                  data: imgBase64,
+                },
+              },
+              { text: `Gambar di atas adalah referensi visual dari user.\n\n${userPrompt}` },
+            ],
+          }],
+          generationConfig: {
+            maxOutputTokens: 2048,
+            responseMimeType: "application/json",
+          },
+        }),
+      });
+
+      if (!geminiRes.ok) {
+        const errBody = await geminiRes.text();
+        console.warn("[generate-concept] Gemini multimodal error, fallback ke text-only:", errBody.slice(0, 200));
+        // Fallback ke text-only jika multimodal gagal
+        const result = await callAI({ systemPrompt: CONCEPT_SYSTEM_PROMPT, userPrompt, maxTokens: 2048 });
+        rawAIResponse = result.text;
+      } else {
+        const geminiData = await geminiRes.json();
+        const text = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) throw new Error("Gemini multimodal response kosong");
+        rawAIResponse = text as string;
+        console.log("[generate-concept] ✓ Gemini multimodal berhasil (dengan gambar referensi)");
+      }
+    } else {
+      // Text-only — tidak ada gambar atau tidak ada GEMINI_API_KEY
+      const result = await callAI({
+        systemPrompt: CONCEPT_SYSTEM_PROMPT,
+        userPrompt,
+        maxTokens: 2048,
+      });
+      rawAIResponse = result.text;
+    }
   } catch (err) {
     console.error("[generate-concept] AI error:", err);
     return NextResponse.json<GenerateConceptError>(
@@ -171,7 +230,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 6. Simpan konsep-konsep ke Supabase
-  let savedConcepts: Array<{ id: string; title: string; description: string; color_palette: string[]; style_reference: string }>;
+  let savedConcepts: Array<{ id: string; title: string; description: string; color_palette: string[]; style_reference: string; image_inspiration: string | null }>;
 
   try {
     const inserts = parsed.concepts.map((c) => ({
@@ -180,12 +239,13 @@ export async function POST(req: NextRequest) {
       description: c.description,
       color_palette: c.color_palette,
       style_reference: c.style_reference,
+      image_inspiration: c.image_inspiration ?? null,
     }));
 
     const { data, error } = await supabaseAdminUntyped
       .from("generated_concepts")
       .insert(inserts)
-      .select("id, title, description, color_palette, style_reference");
+      .select("id, title, description, color_palette, style_reference, image_inspiration");
 
     if (error || !data) throw new Error(error?.message ?? "Insert konsep gagal");
     savedConcepts = data as typeof savedConcepts;
@@ -196,6 +256,7 @@ export async function POST(req: NextRequest) {
     savedConcepts = parsed.concepts.map((c, i) => ({
       id: `temp-${i}`,
       ...c,
+      image_inspiration: c.image_inspiration ?? null,
     }));
   }
 

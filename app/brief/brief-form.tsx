@@ -4,6 +4,7 @@ import React, { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChipGroup } from "@/components/ui/chip";
 import { Button } from "@/components/ui/button";
+import { ImageUpload, type ImageUploadValue } from "@/components/ui/image-upload";
 import { cn } from "@/lib/utils";
 import {
   DESIGN_TYPE_OPTIONS,
@@ -129,6 +130,9 @@ export function BriefForm() {
   const [touched, setTouched] = useState<Partial<Record<keyof BriefFormValues, boolean>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  // State gambar referensi — dikelola terpisah dari BriefFormValues karena File tidak JSON-serializable
+  const [imageValue, setImageValue] = useState<ImageUploadValue | null>(null);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
   // Field setters
   const setField = <K extends keyof BriefFormValues>(key: K, value: BriefFormValues[K]) => {
@@ -175,11 +179,37 @@ export function BriefForm() {
     // Submit — panggil API generate-concept
     setIsSubmitting(true);
     setApiError(null);
+    setImageUploadError(null);
 
     try {
+      // Jika ada gambar: upload dulu ke Supabase Storage
+      let referenceImageUrl: string | null = null;
+      if (imageValue) {
+        const formData = new FormData();
+        formData.append("image", imageValue.compressedBlob, "reference.jpg");
+
+        const uploadRes = await fetch("/api/upload-image", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadData = await uploadRes.json() as { url?: string; error?: string };
+
+        if (!uploadRes.ok || !uploadData.url) {
+          setImageUploadError(uploadData.error ?? "Gagal upload gambar. Coba lagi ya.");
+          setIsSubmitting(false);
+          return;
+        }
+        referenceImageUrl = uploadData.url;
+      }
+
       // Simpan brief ke sessionStorage untuk kebutuhan "Generate Ulang" di halaman konsep
       try {
         sessionStorage.setItem("desainer-konsep:brief", JSON.stringify(values));
+        if (referenceImageUrl) {
+          sessionStorage.setItem("desainer-konsep:ref-image", referenceImageUrl);
+        } else {
+          sessionStorage.removeItem("desainer-konsep:ref-image");
+        }
       } catch {
         // sessionStorage tidak tersedia — tidak apa-apa
       }
@@ -187,7 +217,7 @@ export function BriefForm() {
       const res = await fetch("/api/generate-concept", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief: values }),
+        body: JSON.stringify({ brief: values, referenceImageUrl }),
       });
 
       const data = (await res.json()) as GenerateConceptSuccess | GenerateConceptError;
@@ -488,6 +518,32 @@ export function BriefForm() {
           )}
         />
         <FieldError id={id("extra_notes-error")} message={errors.extra_notes} />
+      </div>
+
+      {/* ================================================================
+          FIELD 7 — Gambar Referensi (opsional)
+          Upload 1 gambar (JPG/PNG/WebP, maks 5MB) yang dianalisis AI
+          sebagai pertimbangan visual saat generate konsep.
+      ================================================================ */}
+      <div>
+        <FieldLabel htmlFor={`${uid}-image-input`}>
+          Ada gambar referensi?{" "}
+          <span className="text-[11px] font-normal" style={{ color: "rgba(26,26,46,0.4)" }}>
+            (opsional)
+          </span>
+        </FieldLabel>
+        <FieldHint>
+          Upload 1 gambar yang punya vibe/mood yang kamu mau — foto, artwork, screenshot moodboard.
+          AI akan analisis warna, komposisi, dan mood-nya sebagai bahan pertimbangan konsep.
+        </FieldHint>
+        <ImageUpload
+          value={imageValue}
+          onChange={(v) => {
+            setImageValue(v);
+            setImageUploadError(null);
+          }}
+          externalError={imageUploadError}
+        />
       </div>
 
       {/* ================================================================
