@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip";
 import { LoadingSwatchSkeleton } from "@/components/ui/loading-swatch-skeleton";
 import { getDominantColor, getTiltForIndex } from "@/lib/ai-prompt-engine";
-import { onAuthStateChange, signOut } from "@/lib/auth";
+import { onAuthStateChange } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import type { User } from "@supabase/supabase-js";
+import { AppNav } from "@/components/ui/app-nav";
 import type { ChipColor } from "@/components/ui/chip";
 
 // ---------------------------------------------------------------------------
@@ -66,7 +66,7 @@ const FILTER_OPTIONS: Array<{ value: string; label: string; emoji: string; color
 export default function HistoryClient() {
   const router = useRouter();
   const [state, setState] = useState<ViewState>({ status: "loading_auth" });
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<string | null>(null);
   const [filter, setFilter] = useState<string[]>(["all"]);
   const [showFavOnly, setShowFavOnly] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -75,13 +75,11 @@ export default function HistoryClient() {
   // ── Auth state ──────────────────────────────────────────────────────────
   useEffect(() => {
     const unsub = onAuthStateChange((u) => {
-      setUser(u);
+      setUser(u ? u.id : null);
       if (!u) setState({ status: "unauthenticated" });
     });
     return unsub;
-  }, []);
-
-  // ── Fetch history ────────────────────────────────────────────────────────
+  }, []);// ── Fetch history ────────────────────────────────────────────────────────
   const fetchHistory = useCallback(async () => {
     setState({ status: "loading_data" });
     try {
@@ -107,8 +105,6 @@ export default function HistoryClient() {
   useEffect(() => {
     if (user) fetchHistory();
   }, [user, fetchHistory]);
-
-  // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = useCallback(async (historyId: string) => {
     // Inline confirm — tidak pakai window.confirm (tidak accessible)
     if (confirmDeleteId !== historyId) {
@@ -186,12 +182,7 @@ export default function HistoryClient() {
     }
   }, []);
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
-  };
-
-  // ── Filter logic ──────────────────────────────────────────────────────────
+  // ── Delete ──────────────────────────────────────────────────────────────── ──────────────────────────────────────────────────────────
   const filteredItems = state.status === "ready"
     ? state.items.filter((item) => {
         const type = item.generated_prompts.generated_concepts.design_requests.design_type;
@@ -207,27 +198,24 @@ export default function HistoryClient() {
 
   // ── RENDER: loading auth ──────────────────────────────────────────────────
   if (state.status === "loading_auth") {
-    return <PageShell user={null} onSignOut={handleSignOut}><LoadingGrid /></PageShell>;
+    return <PageShell><LoadingGrid /></PageShell>;
   }
 
-  // ── RENDER: unauthenticated ───────────────────────────────────────────────
   if (state.status === "unauthenticated") {
     return (
-      <PageShell user={null} onSignOut={handleSignOut}>
+      <PageShell>
         <UnauthState />
       </PageShell>
     );
   }
 
-  // ── RENDER: loading data ──────────────────────────────────────────────────
   if (state.status === "loading_data") {
-    return <PageShell user={user} onSignOut={handleSignOut}><LoadingGrid /></PageShell>;
+    return <PageShell><LoadingGrid /></PageShell>;
   }
 
-  // ── RENDER: error ─────────────────────────────────────────────────────────
   if (state.status === "error") {
     return (
-      <PageShell user={user} onSignOut={handleSignOut}>
+      <PageShell>
         <div
           className="rounded-[20px] border px-8 py-12 text-center max-w-md mx-auto"
           style={{ backgroundColor: "rgba(255,92,122,0.05)", borderColor: "rgba(255,92,122,0.2)" }}
@@ -250,7 +238,7 @@ export default function HistoryClient() {
   const totalItems = state.items.length;
 
   return (
-    <PageShell user={user} onSignOut={handleSignOut}>
+    <PageShell>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
         <div>
@@ -471,46 +459,12 @@ export default function HistoryClient() {
 
 function PageShell({
   children,
-  user,
-  onSignOut,
 }: {
   children: React.ReactNode;
-  user: User | null;
-  onSignOut: () => void;
 }) {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#FAF7FF" }}>
-      {/* Nav */}
-      <header
-        className="sticky top-0 z-40 px-6 py-3 flex items-center justify-between"
-        style={{ backgroundColor: "rgba(250,247,255,0.90)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(26,26,46,0.08)" }}
-      >
-        <a href="/" className="flex items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3B5EFF] rounded-[4px]">
-          <div className="flex rounded-[5px] overflow-hidden h-6 w-6 border border-[rgba(26,26,46,0.12)]" aria-hidden="true">
-            <div className="flex-1" style={{ backgroundColor: "#3B5EFF" }} />
-            <div className="flex-1" style={{ backgroundColor: "#FFB100" }} />
-            <div className="flex-1" style={{ backgroundColor: "#FF5C7A" }} />
-          </div>
-          <span className="text-[14px] font-bold" style={{ color: "#1A1A2E", fontFamily: "var(--font-poppins)" }}>
-            Desainer Konsep
-          </span>
-        </a>
-        <div className="flex items-center gap-3">
-          {user && (
-            <span className="hidden sm:block text-[12px]" style={{ color: "rgba(26,26,46,0.45)", fontFamily: "var(--font-poppins)" }}>
-              {user.email}
-            </span>
-          )}
-          {user ? (
-            <Button variant="outline" size="sm" onClick={onSignOut}>Keluar</Button>
-          ) : (
-            <Button variant="primary" size="sm" asChild>
-              <a href="/login">Masuk</a>
-            </Button>
-          )}
-        </div>
-      </header>
-
+      <AppNav />
       <main className="max-w-6xl mx-auto px-5 lg:px-8 py-10 md:py-14">
         {children}
       </main>

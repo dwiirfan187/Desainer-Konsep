@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { SwatchCard } from "@/components/ui/swatch-card";
 import { LoadingSwatchSkeleton } from "@/components/ui/loading-swatch-skeleton";
 import { Button } from "@/components/ui/button";
+import { AppNav } from "@/components/ui/app-nav";
 import { getTiltForIndex, getDominantColor } from "@/lib/ai-prompt-engine";
 import type { GenerateConceptSuccess, GenerateConceptError } from "@/app/api/generate-concept/route";
 import type { BriefFormValues } from "@/lib/brief-schema";
@@ -284,9 +285,9 @@ export default function ConceptsClient({ requestId, initialBrief }: ConceptsClie
 
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen py-10 md:py-16" style={{ backgroundColor: "#FAF7FF" }}>
-      <div className="max-w-5xl mx-auto px-5 lg:px-8">
-        {/* Back nav */}
+    <div className="min-h-screen" style={{ backgroundColor: "#FAF7FF" }}>
+      <AppNav />
+      <div className="max-w-5xl mx-auto px-5 lg:px-8 py-10 md:py-14">
         <a
           href="/brief"
           className="inline-flex items-center gap-1.5 text-[13px] font-medium mb-8 rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3B5EFF]"

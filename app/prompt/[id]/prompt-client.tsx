@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SwatchCard } from "@/components/ui/swatch-card";
 import { Button } from "@/components/ui/button";
+import { AppNav } from "@/components/ui/app-nav";
 import { getDominantColor } from "@/lib/ai-prompt-engine";
 import { onAuthStateChange } from "@/lib/auth";
 import type { GeneratePromptSuccess } from "@/app/api/generate-prompt/route";
@@ -392,7 +393,6 @@ export default function PromptClient({ conceptId, requestId }: PromptClientProps
 function PageShell({
   children,
   requestId,
-  conceptId,
 }: {
   children: React.ReactNode;
   requestId: string | null;
@@ -400,8 +400,9 @@ function PageShell({
 }) {
   const backHref = requestId ? `/concepts/${requestId}` : "/brief";
   return (
-    <div className="min-h-screen py-10 md:py-16" style={{ backgroundColor: "#FAF7FF" }}>
-      <div className="max-w-5xl mx-auto px-5 lg:px-8">
+    <div className="min-h-screen" style={{ backgroundColor: "#FAF7FF" }}>
+      <AppNav />
+      <div className="max-w-5xl mx-auto px-5 lg:px-8 py-10 md:py-14">
         <a
           href={backHref}
           className="inline-flex items-center gap-1.5 text-[13px] font-medium mb-8 rounded-[6px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3B5EFF]"

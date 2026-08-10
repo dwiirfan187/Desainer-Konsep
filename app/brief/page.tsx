@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BriefForm } from "./brief-form";
+import { AppNav } from "@/components/ui/app-nav";
 
 export const metadata: Metadata = {
   title: "Bikin Brief Desain — Desainer Konsep",
   description:
     "Ceritain brief desain kamu — jenis, topik, mood, dan referensi — dan dapatkan konsep visual + prompt siap pakai.",
-  robots: { index: false, follow: false }, // belum public saat MVP
+  robots: { index: false, follow: false },
 };
 
 export default function BriefPage() {
   return (
-    <div
-      className="min-h-screen py-10 md:py-16"
-      style={{ backgroundColor: "#FAF7FF" }}
-    >
-      <div className="max-w-[640px] mx-auto px-5">
+    <div className="min-h-screen" style={{ backgroundColor: "#FAF7FF" }}>
+      <AppNav />
+
+      <div className="max-w-[640px] mx-auto px-5 py-10 md:py-16">
 
         {/* ----------------------------------------------------------------
             Back nav
