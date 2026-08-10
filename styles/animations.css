@@ -1,0 +1,51 @@
+/* ==========================================================================
+   animations.css
+   Animasi kustom untuk elemen Swatch Card dan micro-interactions.
+   Di-import via globals.css saat dibutuhkan.
+   ========================================================================== */
+
+/* Swatch Card: jatuh & settle saat hero load (DESIGN.md §4) */
+@keyframes cardSettle {
+  0% {
+    opacity: 0;
+    transform: translateY(-24px) rotate(var(--card-tilt, 0deg));
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(4px) rotate(var(--card-tilt, 0deg));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--card-tilt, 0deg));
+  }
+}
+
+/* Loading skeleton shimmer warna-warni (DESIGN.md §4) */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Copy button: checkmark flash */
+@keyframes copyFlash {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Bounce ringan untuk tombol submit (DESIGN.md §3.2) */
+@keyframes bouncePress {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.96);
+  }
+}
