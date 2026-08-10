@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/history";
 
+  console.log("[auth/callback] called — code present:", !!code, "| next:", next);
+  console.log("[auth/callback] all searchParams:", Object.fromEntries(searchParams.entries()));
+
   if (code) {
     // Buat response redirect dulu — cookies akan di-set ke response ini
     const redirectResponse = NextResponse.redirect(`${origin}${next}`);
@@ -51,7 +54,13 @@ export async function GET(request: NextRequest) {
       return redirectResponse;
     }
 
-    console.error("[auth/callback] exchangeCodeForSession error:", error.message);
+    console.error("[auth/callback] exchangeCodeForSession FAILED");
+    console.error("[auth/callback] error.name:", error.name);
+    console.error("[auth/callback] error.message:", error.message);
+    console.error("[auth/callback] error.status:", error.status);
+    console.error("[auth/callback] full error object:", JSON.stringify(error, null, 2));
+    console.error("[auth/callback] request URL:", request.url);
+    console.error("[auth/callback] code (first 8 chars):", code.slice(0, 8) + "...");
   }
 
   // Jika tidak ada code atau exchange gagal, redirect ke login dengan pesan error
