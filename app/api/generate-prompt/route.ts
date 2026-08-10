@@ -2,8 +2,8 @@
  * POST /api/generate-prompt
  *
  * Menerima concept_id yang dipilih user, fetch data konsep + brief dari
- * Supabase, memanggil AI dengan anti-AI-look system prompt, lalu menyimpan
- * dua versi prompt (chatgpt + midjourney) ke tabel generated_prompts.
+ * Supabase, memanggil AI via lib/ai-provider (Gemini → OpenAI fallback),
+ * lalu menyimpan dua versi prompt (chatgpt + midjourney) ke tabel generated_prompts.
  *
  * Security: API key AI hanya di server (env var), tidak pernah ke client.
  */
@@ -16,6 +16,7 @@ import {
   parsePromptResponse,
   type ConceptInput,
 } from "@/lib/anti-ai-prompt-engine";
+import { callAI } from "@/lib/ai-provider";
 
 // ---------------------------------------------------------------------------
 // Request / Response types
@@ -54,78 +55,7 @@ export interface GeneratePromptError {
   code: "NOT_FOUND" | "AI_ERROR" | "DB_ERROR" | "VALIDATION_ERROR";
 }
 
-// ---------------------------------------------------------------------------
-// AI callers — identik dengan pattern di generate-concept/route.ts
-// ---------------------------------------------------------------------------
-
-async function callClaude(userPrompt: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY tidak tersedia");
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-3-5-haiku-20241022",
-      max_tokens: 3000,
-      system: ANTI_AI_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPrompt }],
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Claude API error ${res.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await res.json();
-  const text = data?.content?.[0]?.text;
-  if (!text) throw new Error("Claude response kosong");
-  return text as string;
-}
-
-async function callOpenAI(userPrompt: string): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY tidak tersedia");
-
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      max_tokens: 3000,
-      temperature: 0.8,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: ANTI_AI_SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`OpenAI API error ${res.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await res.json();
-  const text = data?.choices?.[0]?.message?.content;
-  if (!text) throw new Error("OpenAI response kosong");
-  return text as string;
-}
-
-async function callAI(userPrompt: string): Promise<string> {
-  if (process.env.ANTHROPIC_API_KEY) return callClaude(userPrompt);
-  if (process.env.OPENAI_API_KEY) return callOpenAI(userPrompt);
-  throw new Error("Tidak ada AI API key yang dikonfigurasi");
-}
+// AI dipanggil via lib/ai-provider (Gemini primary → OpenAI fallback)
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -267,7 +197,12 @@ export async function POST(req: NextRequest) {
   let rawResponse: string;
   try {
     const userPrompt = buildPromptRequest(conceptInput);
-    rawResponse = await callAI(userPrompt);
+    const result = await callAI({
+      systemPrompt: ANTI_AI_SYSTEM_PROMPT,
+      userPrompt,
+      maxTokens: 3000,
+    });
+    rawResponse = result.text;
   } catch (err) {
     console.error("[generate-prompt] AI error:", err);
     return NextResponse.json<GeneratePromptError>(

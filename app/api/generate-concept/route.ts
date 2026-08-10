@@ -1,7 +1,7 @@
 /**
  * POST /api/generate-concept
  *
- * Menerima brief form, memanggil AI API (Claude atau GPT),
+ * Menerima brief form, memanggil AI API via lib/ai-provider (Gemini → OpenAI),
  * menyimpan hasil ke Supabase, dan mengembalikan requestId + konsep.
  *
  * Security: API key AI hanya ada di server (env var), tidak pernah ke client.
@@ -15,6 +15,7 @@ import {
   parseConceptResponse,
 } from "@/lib/ai-prompt-engine";
 import { validateBriefForm, type BriefFormValues } from "@/lib/brief-schema";
+import { callAI } from "@/lib/ai-provider";
 
 // ---------------------------------------------------------------------------
 // Types untuk request/response
@@ -42,100 +43,7 @@ export interface GenerateConceptError {
   code: "VALIDATION_ERROR" | "AI_ERROR" | "DB_ERROR" | "UNKNOWN_ERROR";
 }
 
-// ---------------------------------------------------------------------------
-// Pilih provider AI dari env vars (Claude diutamakan, fallback ke OpenAI)
-// ---------------------------------------------------------------------------
-
-type AIProvider = "anthropic" | "openai";
-
-function getAIProvider(): AIProvider {
-  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
-  if (process.env.OPENAI_API_KEY) return "openai";
-  throw new Error(
-    "Tidak ada AI API key yang dikonfigurasi. Set ANTHROPIC_API_KEY atau OPENAI_API_KEY di .env.local"
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Caller untuk Anthropic Claude API
-// ---------------------------------------------------------------------------
-
-async function callClaude(userPrompt: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY tidak tersedia");
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-3-5-haiku-20241022",
-      max_tokens: 2048,
-      system: CONCEPT_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPrompt }],
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Claude API error ${res.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await res.json();
-  const text = data?.content?.[0]?.text;
-  if (!text) throw new Error("Claude response kosong atau tidak terduga");
-  return text as string;
-}
-
-// ---------------------------------------------------------------------------
-// Caller untuk OpenAI GPT API
-// ---------------------------------------------------------------------------
-
-async function callOpenAI(userPrompt: string): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY tidak tersedia");
-
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      max_tokens: 2048,
-      temperature: 0.85,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: CONCEPT_SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`OpenAI API error ${res.status}: ${body.slice(0, 200)}`);
-  }
-
-  const data = await res.json();
-  const text = data?.choices?.[0]?.message?.content;
-  if (!text) throw new Error("OpenAI response kosong atau tidak terduga");
-  return text as string;
-}
-
-// ---------------------------------------------------------------------------
-// Dispatcher: pilih provider, panggil AI, return raw string
-// ---------------------------------------------------------------------------
-
-async function callAI(userPrompt: string): Promise<string> {
-  const provider = getAIProvider();
-  if (provider === "anthropic") return callClaude(userPrompt);
-  return callOpenAI(userPrompt);
-}
+// AI dipanggil via lib/ai-provider (Gemini primary → OpenAI fallback)
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -230,7 +138,12 @@ export async function POST(req: NextRequest) {
   let rawAIResponse: string;
   try {
     const userPrompt = buildUserPrompt(brief);
-    rawAIResponse = await callAI(userPrompt);
+    const result = await callAI({
+      systemPrompt: CONCEPT_SYSTEM_PROMPT,
+      userPrompt,
+      maxTokens: 2048,
+    });
+    rawAIResponse = result.text;
   } catch (err) {
     console.error("[generate-concept] AI error:", err);
     return NextResponse.json<GenerateConceptError>(
