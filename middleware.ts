@@ -1,63 +1,25 @@
 /**
  * middleware.ts
  *
- * Refresh Supabase session di setiap request supaya:
- * 1. Token yang expired otomatis di-refresh
- * 2. Cookie session selalu up-to-date sebelum Server Components dirender
+ * Pass-through middleware — tidak memanggil Supabase sama sekali.
  *
- * Tanpa ini, session akan expired dan user dianggap logout meski
- * baru saja login — terutama terlihat setelah OAuth callback.
+ * Session management ditangani sepenuhnya di sisi client (lib/supabase.ts
+ * pakai createBrowserClient yang menyimpan session di cookie) dan di
+ * auth callback route (app/auth/callback/route.ts).
  *
- * Pola ini adalah rekomendasi resmi Supabase untuk Next.js App Router:
- * https://supabase.com/docs/guides/auth/server-side/nextjs
+ * Middleware Supabase dihapus karena menyebabkan MIDDLEWARE_INVOCATION_TIMEOUT
+ * di Vercel — setiap network call ke Supabase dari middleware Edge berisiko
+ * timeout pada cold start atau latency tinggi.
  */
 
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          // Set cookie di request (untuk downstream middleware/handlers)
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          // Buat response baru dengan cookie yang sudah di-update
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  // Baca session dari cookie lokal — tidak butuh network call ke Supabase.
-  // Ini cukup untuk refresh cookie session di setiap request.
-  // Gunakan getUser() (network call) hanya di API routes yang butuh verifikasi ketat.
-  await supabase.auth.getSession();
-
-  return supabaseResponse;
+export function middleware(request: NextRequest) {
+  return NextResponse.next({ request });
 }
 
 export const config = {
   matcher: [
-    /*
-     * Jalankan middleware di semua path KECUALI:
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico
-     * - File-file public (svg, png, jpg, dsb)
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
