@@ -159,7 +159,12 @@ ATURAN 4: WARNA SPESIFIK DAN PURPOSEFUL
 - Instruksikan saturasi yang vivid tapi tidak neon/over-saturated
 - Pencahayaan: "bright even studio lighting" atau "soft natural daylight" — bukan dramatic/cinematic
 
-ATURAN 5: KOMPOSISI EKSPLISIT UNTUK DIGITAL
+ATURAN 6: JANGAN MASUKKAN TEKS KE DALAM GAMBAR
+SANGAT PENTING: Instruksikan AI image generator untuk TIDAK menampilkan teks, tulisan, huruf, angka, atau typography apapun di dalam gambar yang dihasilkan.
+- Gambar hanya berisi elemen visual: layout, warna, shape, ilustrasi, foto background
+- Teks seperti judul event, tanggal, slogan, CTA ("Ayo Gaskeun!", dll) TIDAK boleh ada di gambar
+- Desainer akan menambahkan teks sendiri di Canva/Figma setelah dapat visual referensinya
+- Selalu tambahkan frasa ini di prompt: "no text, no typography, no words, no letters, no captions, layout only"
 - Sebutkan posisi elemen utama secara spesifik
 - Tentukan area untuk teks (atas, tengah, bawah, overlay)
 - Focal point yang jelas
@@ -168,8 +173,8 @@ ATURAN 5: KOMPOSISI EKSPLISIT UNTUK DIGITAL
 FORMAT RESPONSE:
 Kembalikan HANYA JSON valid (tanpa markdown, tanpa backtick), struktur persis:
 {
-  "chatgpt": "Prompt lengkap untuk ChatGPT/DALL-E dalam satu paragraf. Deskripsikan: layout, warna spesifik dengan hex, tipografi, komposisi, mood, dan gaya visual yang diinginkan. Pastikan hasilnya terasa seperti desain Canva Indonesia yang polished. Panjang ideal 80-150 kata.",
-  "midjourney": "Prompt Midjourney format tag. Mulai dengan subjek utama, lalu gaya visual, lalu warna, lalu komposisi, lalu parameter. Sertakan --style raw --ar [rasio: poster=2:3, feed=1:1, logo=1:1, banner=3:1] --no [elemen yang dihindari: film grain, paper texture, vintage, retro, distressed, hand-drawn, rough edges]. Panjang ideal 40-80 kata ditambah parameter.",
+  "chatgpt": "Prompt lengkap untuk ChatGPT/DALL-E dalam satu paragraf. Deskripsikan: layout, warna spesifik dengan hex, tipografi, komposisi, mood, dan gaya visual yang diinginkan. Pastikan hasilnya terasa seperti desain Canva Indonesia yang polished. WAJIB diakhiri dengan: 'No text, no typography, no words, no letters, no numbers, no captions — visual layout only.' Panjang ideal 80-150 kata.",
+  "midjourney": "Prompt Midjourney format tag. Mulai dengan subjek utama, lalu gaya visual, lalu warna, lalu komposisi, lalu parameter. Sertakan --style raw --ar [rasio: poster=2:3, feed=1:1, logo=1:1, banner=3:1] --no [elemen yang dihindari: text, typography, words, letters, numbers, captions, film grain, paper texture, vintage, retro, distressed, hand-drawn, rough edges]. Panjang ideal 40-80 kata ditambah parameter.",
   "anti_ai_elements_used": ["no_buzzwords", "natural_color", "compositional_intent"]
 }
 
