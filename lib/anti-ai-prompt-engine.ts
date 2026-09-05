@@ -159,12 +159,12 @@ ATURAN 4: WARNA SPESIFIK DAN PURPOSEFUL
 - Instruksikan saturasi yang vivid tapi tidak neon/over-saturated
 - Pencahayaan: "bright even studio lighting" atau "soft natural daylight" — bukan dramatic/cinematic
 
-ATURAN 6: JANGAN MASUKKAN TEKS KE DALAM GAMBAR
-SANGAT PENTING: Instruksikan AI image generator untuk TIDAK menampilkan teks, tulisan, huruf, angka, atau typography apapun di dalam gambar yang dihasilkan.
-- Gambar hanya berisi elemen visual: layout, warna, shape, ilustrasi, foto background
-- Teks seperti judul event, tanggal, slogan, CTA ("Ayo Gaskeun!", dll) TIDAK boleh ada di gambar
-- Desainer akan menambahkan teks sendiri di Canva/Figma setelah dapat visual referensinya
-- Selalu tambahkan frasa ini di prompt: "no text, no typography, no words, no letters, no captions, layout only"
+ATURAN 6: TEKS DI GAMBAR HANYA DARI BRIEF USER
+Gambar boleh dan sebaiknya punya teks sebagai referensi visual layout — tapi HANYA teks yang memang ada di brief user:
+- Boleh: nama event, topik, tanggal, tempat, nama brand yang disebutkan user di brief
+- TIDAK BOLEH: slogan buatan AI, CTA random ("Ayo Gaskeun!", "Daftar Sekarang!", "Join Us!"), kata-kata motivasi, atau teks apapun yang tidak disebutkan di brief
+- Tujuannya adalah referensi layout teks, bukan copywriting lengkap
+- Jika brief tidak menyebutkan teks spesifik, cukup tampilkan placeholder sederhana atau minimal teks
 - Sebutkan posisi elemen utama secara spesifik
 - Tentukan area untuk teks (atas, tengah, bawah, overlay)
 - Focal point yang jelas
@@ -173,8 +173,8 @@ SANGAT PENTING: Instruksikan AI image generator untuk TIDAK menampilkan teks, tu
 FORMAT RESPONSE:
 Kembalikan HANYA JSON valid (tanpa markdown, tanpa backtick), struktur persis:
 {
-  "chatgpt": "Prompt lengkap untuk ChatGPT/DALL-E dalam satu paragraf. Deskripsikan: layout, warna spesifik dengan hex, tipografi, komposisi, mood, dan gaya visual yang diinginkan. Pastikan hasilnya terasa seperti desain Canva Indonesia yang polished. WAJIB diakhiri dengan: 'No text, no typography, no words, no letters, no numbers, no captions — visual layout only.' Panjang ideal 80-150 kata.",
-  "midjourney": "Prompt Midjourney format tag. Mulai dengan subjek utama, lalu gaya visual, lalu warna, lalu komposisi, lalu parameter. Sertakan --style raw --ar [rasio: poster=2:3, feed=1:1, logo=1:1, banner=3:1] --no [elemen yang dihindari: text, typography, words, letters, numbers, captions, film grain, paper texture, vintage, retro, distressed, hand-drawn, rough edges]. Panjang ideal 40-80 kata ditambah parameter.",
+  "chatgpt": "Prompt lengkap untuk ChatGPT/DALL-E dalam satu paragraf. Deskripsikan: layout, warna spesifik dengan hex, tipografi, komposisi, mood, dan gaya visual yang diinginkan. Pastikan hasilnya terasa seperti desain Canva Indonesia yang polished. Jika brief menyebutkan nama event/topik/tanggal/tempat, instruksikan agar teks tersebut tampil di gambar sesuai hierarki visual — tapi JANGAN tambahkan slogan, CTA, atau kata-kata yang tidak ada di brief. Panjang ideal 80-150 kata.",
+  "midjourney": "Prompt Midjourney format tag. Mulai dengan subjek utama, lalu gaya visual, lalu warna, lalu komposisi, lalu parameter. Sertakan --style raw --ar [rasio: poster=2:3, feed=1:1, logo=1:1, banner=3:1] --no [elemen yang dihindari: random slogans, made-up text, AI-generated captions, film grain, paper texture, vintage, retro, distressed, hand-drawn, rough edges]. Panjang ideal 40-80 kata ditambah parameter.",
   "anti_ai_elements_used": ["no_buzzwords", "natural_color", "compositional_intent"]
 }
 
