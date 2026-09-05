@@ -41,9 +41,10 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // PENTING: getUser() harus dipanggil agar token di-refresh jika perlu.
-  // Jangan hapus baris ini meski hasilnya tidak dipakai di sini.
-  await supabase.auth.getUser();
+  // Baca session dari cookie lokal — tidak butuh network call ke Supabase.
+  // Ini cukup untuk refresh cookie session di setiap request.
+  // Gunakan getUser() (network call) hanya di API routes yang butuh verifikasi ketat.
+  await supabase.auth.getSession();
 
   return supabaseResponse;
 }
