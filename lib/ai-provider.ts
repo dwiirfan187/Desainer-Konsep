@@ -33,6 +33,12 @@ export interface AICallOptions {
    * Default: 2048. Generate prompt butuh lebih banyak — pakai 3000+.
    */
   maxTokens?: number;
+  /**
+   * Nama env var Gemini API key yang dipakai.
+   * Default: "GEMINI_API_KEY".
+   * Pakai "GEMINI_API_KEY_2" untuk generate-prompt supaya quota terpisah.
+   */
+  geminiKeyEnv?: "GEMINI_API_KEY" | "GEMINI_API_KEY_2";
 }
 
 export interface AICallResult {
@@ -43,13 +49,10 @@ export interface AICallResult {
 }
 
 // ---------------------------------------------------------------------------
-// Gemini API caller (PRIMARY)
+// Gemini API caller — pakai apiKey yang diberikan
 // ---------------------------------------------------------------------------
 
-async function callGemini(opts: Required<AICallOptions>): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY tidak tersedia");
-
+async function callGemini(opts: Required<AICallOptions>, apiKey: string): Promise<string> {
   // Gemini 3.6 Flash — model Flash GA terbaru (Agustus 2026)
   const model = "gemini-3.6-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -152,21 +155,25 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     systemPrompt: opts.systemPrompt,
     userPrompt: opts.userPrompt,
     maxTokens: opts.maxTokens ?? 2048,
+    geminiKeyEnv: opts.geminiKeyEnv ?? "GEMINI_API_KEY",
   };
 
+  // Ambil API key sesuai env var yang dipilih
+  const geminiKey = process.env[resolved.geminiKeyEnv];
+
   // ── TAHAP 1: Coba Gemini ──────────────────────────────────────────────────
-  if (process.env.GEMINI_API_KEY) {
+  if (geminiKey) {
     try {
-      const text = await callGemini(resolved);
-      console.log(`[ai-provider] ✓ Gemini berhasil (maxTokens: ${resolved.maxTokens})`);
+      const text = await callGemini(resolved, geminiKey);
+      console.log(`[ai-provider] ✓ Gemini berhasil via ${resolved.geminiKeyEnv} (maxTokens: ${resolved.maxTokens})`);
       return { text, provider: "gemini" };
     } catch (geminiErr) {
       const errMsg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
-      console.warn(`[ai-provider] ✗ Gemini gagal: ${errMsg}`);
+      console.warn(`[ai-provider] ✗ Gemini gagal (${resolved.geminiKeyEnv}): ${errMsg}`);
       console.log("[ai-provider] → Fallback ke OpenAI…");
     }
   } else {
-    console.log("[ai-provider] GEMINI_API_KEY tidak ada, langsung ke OpenAI");
+    console.log(`[ai-provider] ${resolved.geminiKeyEnv} tidak ada, langsung ke OpenAI`);
   }
 
   // ── TAHAP 2: Fallback ke OpenAI ───────────────────────────────────────────

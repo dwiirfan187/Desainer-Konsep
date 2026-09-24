@@ -201,6 +201,7 @@ export async function POST(req: NextRequest) {
       systemPrompt: ANTI_AI_SYSTEM_PROMPT,
       userPrompt,
       maxTokens: 3000,
+      geminiKeyEnv: "GEMINI_API_KEY_2",
     });
     rawResponse = result.text;
   } catch (err) {
