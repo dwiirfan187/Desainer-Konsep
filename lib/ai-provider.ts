@@ -122,15 +122,12 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   const maxTokens = opts.maxTokens ?? 2048;
   const primaryKeyEnv = opts.geminiKeyEnv ?? "GEMINI_API_KEY";
 
-  // Urutan fallback:
-  // 1. Key utama yang dipilih (KEY_1 atau KEY_2)
-  // 2. KEY_3 (fallback pertama)
-  // 3. KEY_4 (fallback kedua)
-  // 4. Key utama lainnya (KEY_2 atau KEY_1) sebagai last resort
+  // Urutan fallback key — maksimal 2 key dicoba untuk hemat quota.
+  // KEY_3 dan KEY_4 hanya dipakai kalau key utama benar-benar gagal permanen.
   const fallbackOrder: string[] =
     primaryKeyEnv === "GEMINI_API_KEY"
-      ? ["GEMINI_API_KEY", "GEMINI_API_KEY_3", "GEMINI_API_KEY_4", "GEMINI_API_KEY_2"]
-      : ["GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "GEMINI_API_KEY_4", "GEMINI_API_KEY"];
+      ? ["GEMINI_API_KEY", "GEMINI_API_KEY_3"]
+      : ["GEMINI_API_KEY_2", "GEMINI_API_KEY_4"];
 
   const baseOpts = { systemPrompt: opts.systemPrompt, userPrompt: opts.userPrompt, maxTokens };
 
@@ -148,13 +145,24 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
       return { text, provider: "gemini", keyUsed: keyEnv };
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      console.warn(`[ai-provider] ✗ ${keyEnv} gagal: ${errMsg}`);
-      // Lanjut ke key berikutnya
+
+      // Kalau 429 (quota habis) — STOP, jangan coba key lain yang mungkin juga habis
+      // karena semua key dari project berbeda punya quota sendiri,
+      // tapi model yang sama tetap kena rate limit global
+      if (errMsg.includes("429")) {
+        console.warn(`[ai-provider] ✗ ${keyEnv} quota habis (429) — berhenti retry`);
+        throw new Error(
+          "Quota Gemini habis untuk saat ini. Coba lagi dalam beberapa menit ya."
+        );
+      }
+
+      // Kalau 503 (model overload) — coba key berikutnya
+      console.warn(`[ai-provider] ✗ ${keyEnv} gagal: ${errMsg.slice(0, 100)} — coba key berikutnya`);
     }
   }
 
   // Semua key gagal
   throw new Error(
-    "Semua Gemini API key gagal. Kemungkinan semua quota habis atau model sedang down. Coba lagi nanti."
+    "Lagi gagal connect ke AI-nya, coba generate ulang ya."
   );
 }
