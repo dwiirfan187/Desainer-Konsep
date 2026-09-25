@@ -49,10 +49,13 @@ export interface AICallResult {
 }
 
 // ---------------------------------------------------------------------------
-// Gemini model
+// Gemini models — urutan prioritas
 // ---------------------------------------------------------------------------
 
-const GEMINI_MODEL = "gemini-3.6-flash";
+const GEMINI_MODELS = [
+  "gemini-3.6-flash",   // primary — terbaru
+  "gemini-3.5-flash",   // fallback — lebih stabil
+];
 
 // ---------------------------------------------------------------------------
 // Single Gemini caller — pakai apiKey yang diberikan
@@ -62,43 +65,53 @@ async function callGeminiWithKey(
   opts: Required<Pick<AICallOptions, "systemPrompt" | "userPrompt" | "maxTokens">>,
   apiKey: string
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+  // Coba tiap model secara berurutan — kalau 503 lanjut ke model berikutnya
+  let lastError = "";
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system_instruction: {
-        parts: [{ text: opts.systemPrompt }],
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: opts.userPrompt }],
+  for (const model of GEMINI_MODELS) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: {
+          parts: [{ text: opts.systemPrompt }],
         },
-      ],
-      generationConfig: {
-        maxOutputTokens: opts.maxTokens,
-        responseMimeType: "application/json",
-      },
-    }),
-  });
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: opts.userPrompt }],
+          },
+        ],
+        generationConfig: {
+          maxOutputTokens: opts.maxTokens,
+          responseMimeType: "application/json",
+        },
+      }),
+    });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Gemini API error ${res.status}: ${body.slice(0, 300)}`);
+    if (!res.ok) {
+      const body = await res.text();
+      lastError = `${model} error ${res.status}: ${body.slice(0, 200)}`;
+      console.warn(`[ai-provider] ✗ ${model} gagal: ${res.status} — coba model berikutnya`);
+      continue; // coba model berikutnya
+    }
+
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text || typeof text !== "string") {
+      const finishReason = data?.candidates?.[0]?.finishReason;
+      lastError = `${model} response kosong. finishReason: ${finishReason ?? "unknown"}`;
+      console.warn(`[ai-provider] ✗ ${model} response kosong — coba model berikutnya`);
+      continue;
+    }
+
+    console.log(`[ai-provider] ✓ ${model} berhasil`);
+    return text;
   }
 
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text || typeof text !== "string") {
-    const finishReason = data?.candidates?.[0]?.finishReason;
-    throw new Error(
-      `Gemini response kosong atau tidak valid. finishReason: ${finishReason ?? "unknown"}`
-    );
-  }
-
-  return text;
+  throw new Error(`Semua model gagal. Error terakhir: ${lastError}`);
 }
 
 // ---------------------------------------------------------------------------
