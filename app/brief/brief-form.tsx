@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useId, useState } from "react";
+import React, { useId, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChipGroup } from "@/components/ui/chip";
 import { Button } from "@/components/ui/button";
@@ -134,6 +134,19 @@ export function BriefForm() {
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [imageValue, setImageValue] = useState<ImageUploadValue | null>(null);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+
+  // Pre-fill form dari sessionStorage kalau user balik dari halaman konsep
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("desainer-konsep:brief");
+      if (saved) {
+        const parsed = JSON.parse(saved) as BriefFormValues;
+        setValues(parsed);
+      }
+    } catch {
+      // sessionStorage tidak tersedia atau data korup — biarkan form kosong
+    }
+  }, []);
 
   // Errors selalu dihitung langsung dari values — tidak disimpan sebagai state terpisah
   // Ini menghindari masalah stale closure yang bikin error tidak hilang setelah dipilih
