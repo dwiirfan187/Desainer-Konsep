@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     // Fetch design_request terkait untuk konteks brief
     const { data: request, error: requestErr } = await supabaseAdminUntyped
       .from("design_requests")
-      .select("design_type, topic, mood_tags, target_audience, color_preference, extra_notes")
+      .select("design_type, topic, mood_tags, aspect_ratio, target_audience, color_preference, extra_notes")
       .eq("id", concept.request_id)
       .single();
 
@@ -131,6 +131,7 @@ export async function POST(req: NextRequest) {
       design_type: request.design_type as string,
       topic: request.topic as string,
       mood_tags: request.mood_tags as string[],
+      aspect_ratio: request.aspect_ratio as string | null,
       target_audience: request.target_audience as string | null,
       color_preference: request.color_preference as string | null,
       extra_notes: request.extra_notes as string | null,

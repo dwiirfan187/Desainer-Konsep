@@ -30,6 +30,7 @@ export interface ConceptInput {
   design_type: string;
   topic: string;
   mood_tags: string[];
+  aspect_ratio?: string | null;
   target_audience?: string | null;
   color_preference?: string | null;
   extra_notes?: string | null;
@@ -174,7 +175,7 @@ FORMAT RESPONSE:
 Kembalikan HANYA JSON valid (tanpa markdown, tanpa backtick), struktur persis:
 {
   "chatgpt": "Prompt lengkap untuk ChatGPT/DALL-E dalam satu paragraf. Deskripsikan: layout, warna spesifik dengan hex, tipografi, komposisi, mood, dan gaya visual yang diinginkan. Pastikan hasilnya terasa seperti desain Canva Indonesia yang polished. Jika brief menyebutkan nama event/topik/tanggal/tempat, instruksikan agar teks tersebut tampil di gambar sesuai hierarki visual — tapi JANGAN tambahkan slogan, CTA, atau kata-kata yang tidak ada di brief. Panjang ideal 80-150 kata.",
-  "midjourney": "Prompt Midjourney format tag. Mulai dengan subjek utama, lalu gaya visual, lalu warna, lalu komposisi, lalu parameter. Sertakan --style raw --ar [rasio: poster=2:3, feed=1:1, logo=1:1, banner=3:1] --no [elemen yang dihindari: random slogans, made-up text, AI-generated captions, film grain, paper texture, vintage, retro, distressed, hand-drawn, rough edges]. Panjang ideal 40-80 kata ditambah parameter.",
+  "midjourney": "Prompt Midjourney format tag. Mulai dengan subjek utama, lalu gaya visual, lalu warna, lalu komposisi, lalu parameter. Sertakan --style raw --ar [gunakan PERSIS nilai rasio kanvas dari brief, mis. 9:16 atau 1:1 atau 3:1] --no [elemen yang dihindari: random slogans, made-up text, AI-generated captions, film grain, paper texture, vintage, retro, distressed, hand-drawn, rough edges]. Panjang ideal 40-80 kata ditambah parameter.",
   "anti_ai_elements_used": ["no_buzzwords", "natural_color", "compositional_intent"]
 }
 
@@ -200,6 +201,9 @@ export function buildPromptRequest(concept: ConceptInput): string {
   lines.push(`- Jenis desain: ${concept.design_type}`);
   lines.push(`- Topik/tema: ${concept.topic}`);
   lines.push(`- Mood/vibe: ${concept.mood_tags.join(", ")}`);
+  if (concept.aspect_ratio) {
+    lines.push(`- Rasio kanvas: ${concept.aspect_ratio} — gunakan nilai ini PERSIS sebagai --ar di Midjourney`);
+  }
 
   if (concept.target_audience) {
     lines.push(`- Target audiens: ${concept.target_audience}`);

@@ -8,6 +8,7 @@ import { ImageUpload, type ImageUploadValue } from "@/components/ui/image-upload
 import { cn } from "@/lib/utils";
 import {
   DESIGN_TYPE_OPTIONS,
+  ASPECT_RATIO_OPTIONS,
   MOOD_OPTIONS,
   FIELD_LIMITS,
   INITIAL_FORM_VALUES,
@@ -326,7 +327,99 @@ export function BriefForm() {
       </fieldset>
 
       {/* ================================================================
-          FIELD 2 — Topik/Tema (WAJIB)
+          FIELD 2 — Rasio Kanvas (WAJIB)
+          Card selector visual dengan preview kotak proporsional
+      ================================================================ */}
+      <fieldset>
+        <legend className="sr-only">Rasio Kanvas</legend>
+        <FieldLabel htmlFor={id("aspect_ratio")} required>
+          Rasio kanvasnya berapa?
+        </FieldLabel>
+        <FieldHint>
+          Pilih sesuai platform tujuan — ini mempengaruhi komposisi konsep dan parameter prompt.
+        </FieldHint>
+
+        <div
+          role="radiogroup"
+          aria-required="true"
+          aria-describedby={errors.aspect_ratio ? id("aspect_ratio-error") : undefined}
+          className="grid grid-cols-4 gap-2 sm:grid-cols-7"
+        >
+          {ASPECT_RATIO_OPTIONS.map((opt, idx) => {
+            const isSelected = values.aspect_ratio === opt.value;
+            // Normalisasi ukuran preview box — max dimension 36px
+            const maxDim = 36;
+            const scale = maxDim / Math.max(opt.w, opt.h);
+            const boxW = Math.round(opt.w * scale);
+            const boxH = Math.round(opt.h * scale);
+
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                id={idx === 0 ? id("aspect_ratio") : undefined}
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => {
+                  setField("aspect_ratio", opt.value);
+                  markTouched("aspect_ratio");
+                }}
+                onBlur={() => markTouched("aspect_ratio")}
+                className={cn(
+                  "flex flex-col items-center gap-2 rounded-[12px] px-2 py-3 border-2 transition-all duration-[150ms]",
+                  "cursor-pointer select-none",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3B5EFF]",
+                  "active:scale-[0.97]",
+                  isSelected
+                    ? "border-[#3B5EFF] bg-[rgba(59,94,255,0.06)] shadow-[0_4px_12px_rgba(59,94,255,0.15)]"
+                    : "border-[rgba(26,26,46,0.12)] bg-white hover:border-[rgba(59,94,255,0.35)] hover:bg-[rgba(59,94,255,0.03)]"
+                )}
+              >
+                {/* Preview kotak proporsional */}
+                <div className="flex items-center justify-center" style={{ height: 44 }}>
+                  <div
+                    style={{
+                      width: boxW,
+                      height: boxH,
+                      backgroundColor: isSelected ? "#3B5EFF" : "rgba(26,26,46,0.12)",
+                      borderRadius: 3,
+                      transition: "background-color 150ms",
+                    }}
+                    aria-hidden="true"
+                  />
+                </div>
+                {/* Label rasio */}
+                <span
+                  className="text-[12px] font-bold leading-none"
+                  style={{
+                    color: isSelected ? "#3B5EFF" : "#1A1A2E",
+                    fontFamily: "var(--font-poppins)",
+                  }}
+                >
+                  {opt.label}
+                </span>
+                {/* Keterangan */}
+                <span
+                  className="text-[9px] leading-tight text-center hidden sm:block"
+                  style={{ color: "rgba(26,26,46,0.45)", fontFamily: "var(--font-poppins)" }}
+                >
+                  {opt.description}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {/* Keterangan selected di mobile */}
+        {values.aspect_ratio && (
+          <p className="mt-1.5 text-[11px] sm:hidden" style={{ color: "rgba(26,26,46,0.5)", fontFamily: "var(--font-poppins)" }}>
+            {ASPECT_RATIO_OPTIONS.find(o => o.value === values.aspect_ratio)?.description}
+          </p>
+        )}
+        <FieldError id={id("aspect_ratio-error")} message={errors.aspect_ratio} />
+      </fieldset>
+
+      {/* ================================================================
+          FIELD 3 — Topik/Tema (WAJIB)
           PRD §5.1: Text input, maks 500 karakter
       ================================================================ */}
       <div>

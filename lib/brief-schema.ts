@@ -10,6 +10,7 @@
 // ---------------------------------------------------------------------------
 
 export type DesignType = "poster" | "feed" | "logo" | "banner";
+export type AspectRatio = "1:1" | "4:5" | "9:16" | "16:9" | "2:3" | "3:2" | "3:1";
 
 export interface BriefFormValues {
   /** Jenis Desain — wajib (PRD §5.1) */
@@ -18,6 +19,8 @@ export interface BriefFormValues {
   topic: string;
   /** Mood/Vibe — wajib, minimal 1 (PRD §5.1) */
   mood_tags: string[];
+  /** Rasio kanvas — wajib */
+  aspect_ratio: AspectRatio | "";
   /** Target Audiens — opsional, maks 200 karakter */
   target_audience: string;
   /** Warna Favorit — opsional, maks 200 karakter */
@@ -27,6 +30,27 @@ export interface BriefFormValues {
 }
 
 export type BriefFormErrors = Partial<Record<keyof BriefFormValues, string>>;
+
+// ---------------------------------------------------------------------------
+// Opsi Rasio Kanvas
+// ---------------------------------------------------------------------------
+export const ASPECT_RATIO_OPTIONS: Array<{
+  value: AspectRatio;
+  label: string;
+  description: string;
+  /** Width ratio untuk preview box */
+  w: number;
+  /** Height ratio untuk preview box */
+  h: number;
+}> = [
+  { value: "1:1",  label: "1:1",  description: "Feed Instagram / Square",   w: 1,   h: 1   },
+  { value: "4:5",  label: "4:5",  description: "Portrait Feed Instagram",    w: 4,   h: 5   },
+  { value: "9:16", label: "9:16", description: "Story / Reels / TikTok",     w: 9,   h: 16  },
+  { value: "16:9", label: "16:9", description: "YouTube / Presentasi",       w: 16,  h: 9   },
+  { value: "2:3",  label: "2:3",  description: "Poster Portrait",            w: 2,   h: 3   },
+  { value: "3:2",  label: "3:2",  description: "Landscape / Banner Web",     w: 3,   h: 2   },
+  { value: "3:1",  label: "3:1",  description: "Spanduk / Banner Panjang",   w: 3,   h: 1   },
+];
 
 // ---------------------------------------------------------------------------
 // Opsi Jenis Desain (PRD §3)
@@ -172,6 +196,11 @@ export function validateBriefForm(values: BriefFormValues): BriefFormErrors {
     errors.design_type = "Pilih dulu jenis desain yang mau dibuat.";
   }
 
+  // Rasio kanvas — wajib
+  if (!values.aspect_ratio) {
+    errors.aspect_ratio = "Pilih rasio kanvas dulu ya.";
+  }
+
   // Topik/Tema — wajib, 3–500 karakter
   const topic = values.topic.trim();
   if (!topic) {
@@ -210,6 +239,7 @@ export const INITIAL_FORM_VALUES: BriefFormValues = {
   design_type: "",
   topic: "",
   mood_tags: [],
+  aspect_ratio: "",
   target_audience: "",
   color_preference: "",
   extra_notes: "",

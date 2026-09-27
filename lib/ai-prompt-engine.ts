@@ -119,6 +119,9 @@ export function buildUserPrompt(brief: BriefFormValues): string {
   lines.push(`- Jenis desain: ${DESIGN_TYPE_LABELS[brief.design_type as DesignType]}`);
   lines.push(`- Topik/tema: ${brief.topic.trim()}`);
   lines.push(`- Mood/vibe: ${brief.mood_tags.join(", ")}`);
+  if (brief.aspect_ratio) {
+    lines.push(`- Rasio kanvas: ${brief.aspect_ratio}`);
+  }
 
   if (brief.target_audience?.trim()) {
     lines.push(`- Target audiens: ${brief.target_audience.trim()}`);
