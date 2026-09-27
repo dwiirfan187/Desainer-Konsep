@@ -25,7 +25,7 @@ export interface BriefFormValues {
   target_audience: string;
   /** Warna Favorit — opsional, maks 200 karakter */
   color_preference: string;
-  /** Referensi Tambahan — opsional, maks 1000 karakter */
+  /** Referensi Tambahan — wajib, maks 1000 karakter */
   extra_notes: string;
 }
 
@@ -226,8 +226,11 @@ export function validateBriefForm(values: BriefFormValues): BriefFormErrors {
     errors.color_preference = `Maksimal ${FIELD_LIMITS.color_preference} karakter.`;
   }
 
-  // Referensi Tambahan — opsional, maks 1000 karakter
-  if (values.extra_notes.length > FIELD_LIMITS.extra_notes) {
+  // Referensi Tambahan — wajib, maks 1000 karakter
+  const extra_notes = values.extra_notes.trim();
+  if (!extra_notes) {
+    errors.extra_notes = "Catatan atau referensi tambahan wajib diisi ya.";
+  } else if (extra_notes.length > FIELD_LIMITS.extra_notes) {
     errors.extra_notes = `Maksimal ${FIELD_LIMITS.extra_notes} karakter.`;
   }
 

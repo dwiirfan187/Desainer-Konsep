@@ -571,50 +571,7 @@ export function BriefForm() {
       </div>
 
       {/* ================================================================
-          FIELD 6 — Referensi Tambahan (opsional)
-          PRD §5.1: Textarea, nullable, maks 1000 karakter
-      ================================================================ */}
-      <div>
-        <div className="flex items-baseline justify-between mb-1.5">
-          <FieldLabel htmlFor={id("extra_notes")}>
-            Ada catatan atau referensi tambahan?{" "}
-            <span
-              className="text-[11px] font-normal"
-              style={{ color: "rgba(26,26,46,0.4)" }}
-            >
-              (opsional)
-            </span>
-          </FieldLabel>
-          <CharCount
-            current={values.extra_notes.length}
-            max={FIELD_LIMITS.extra_notes}
-            error={!!errors.extra_notes}
-          />
-        </div>
-        <FieldHint>
-          Instruksi khusus, referensi visual, hal yang harus dihindari, atau apapun yang relevan.
-        </FieldHint>
-        <textarea
-          id={id("extra_notes")}
-          value={values.extra_notes}
-          maxLength={FIELD_LIMITS.extra_notes}
-          rows={4}
-          placeholder="Contoh: hindari warna merah, harus ada elemen tangan/illustrated, gaya mirip iklan Jepang retro tahun 80an"
-          aria-invalid={!!errors.extra_notes}
-          aria-describedby={errors.extra_notes ? id("extra_notes-error") : undefined}
-          onChange={(e) => setField("extra_notes", e.target.value)}
-          onBlur={() => markTouched("extra_notes")}
-          className={cn(
-            inputBase,
-            "resize-none leading-relaxed",
-            errors.extra_notes ? inputError : inputIdle
-          )}
-        />
-        <FieldError id={id("extra_notes-error")} message={errors.extra_notes} />
-      </div>
-
-      {/* ================================================================
-          FIELD 7 — Gambar Referensi (opsional)
+          FIELD 6 — Gambar Referensi (opsional)
           Upload 1 gambar (JPG/PNG/WebP, maks 5MB) yang dianalisis AI
           sebagai pertimbangan visual saat generate konsep.
       ================================================================ */}
@@ -640,6 +597,44 @@ export function BriefForm() {
       </div>
 
       {/* ================================================================
+          FIELD 7 — Catatan/Referensi Tambahan (WAJIB)
+          PRD §5.1: Textarea, maks 1000 karakter
+      ================================================================ */}
+      <div>
+        <div className="flex items-baseline justify-between mb-1.5">
+          <FieldLabel htmlFor={id("extra_notes")} required>
+            Catatan atau referensi tambahan
+          </FieldLabel>
+          <CharCount
+            current={values.extra_notes.length}
+            max={FIELD_LIMITS.extra_notes}
+            error={!!errors.extra_notes}
+          />
+        </div>
+        <FieldHint>
+          Instruksi khusus, referensi visual, hal yang harus dihindari, atau apapun yang relevan.
+        </FieldHint>
+        <textarea
+          id={id("extra_notes")}
+          value={values.extra_notes}
+          maxLength={FIELD_LIMITS.extra_notes}
+          rows={4}
+          placeholder="Contoh: hindari warna merah, harus ada elemen tangan/illustrated, gaya mirip iklan Jepang retro tahun 80an"
+          aria-required="true"
+          aria-invalid={!!errors.extra_notes}
+          aria-describedby={errors.extra_notes ? id("extra_notes-error") : undefined}
+          onChange={(e) => setField("extra_notes", e.target.value)}
+          onBlur={() => markTouched("extra_notes")}
+          className={cn(
+            inputBase,
+            "resize-none leading-relaxed",
+            errors.extra_notes ? inputError : inputIdle
+          )}
+        />
+        <FieldError id={id("extra_notes-error")} message={errors.extra_notes} />
+      </div>
+
+      {/* ================================================================
           SUBMIT
       ================================================================ */}
       <div className="pt-2">
@@ -661,8 +656,8 @@ export function BriefForm() {
           </div>
         )}
 
-        {/* Validasi error summary */}
-        {Object.keys(errors).length > 0 && Object.keys(touched).length > 0 && (
+        {/* Validasi error summary — hanya tampil kalau ada error NYATA setelah submit */}
+        {Object.keys(errors).length > 0 && Object.values(touched).some(Boolean) && (
           <div
             role="alert"
             aria-live="polite"
