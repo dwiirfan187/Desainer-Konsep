@@ -127,53 +127,41 @@ export function BriefForm() {
 
   const router = useRouter();
   const [values, setValues] = useState<BriefFormValues>(INITIAL_FORM_VALUES);
-  const [errors, setErrors] = useState<BriefFormErrors>({});
+  // touched: track field mana yang sudah pernah diinteraksi user
   const [touched, setTouched] = useState<Partial<Record<keyof BriefFormValues, boolean>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  // State gambar referensi — dikelola terpisah dari BriefFormValues karena File tidak JSON-serializable
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [imageValue, setImageValue] = useState<ImageUploadValue | null>(null);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
 
-  // Field setters
+  // Errors selalu dihitung langsung dari values — tidak disimpan sebagai state terpisah
+  // Ini menghindari masalah stale closure yang bikin error tidak hilang setelah dipilih
+  const allErrors = validateBriefForm(values);
+
+  // Hanya tampilkan error untuk field yang sudah disentuh ATAU setelah submit pernah dicoba
+  const errors: BriefFormErrors = Object.fromEntries(
+    Object.entries(allErrors).filter(([key]) =>
+      submitAttempted || touched[key as keyof BriefFormValues]
+    )
+  ) as BriefFormErrors;
+
   const setField = <K extends keyof BriefFormValues>(key: K, value: BriefFormValues[K]) => {
-    const next = { ...values, [key]: value };
-    setValues(next);
-    // Selalu validasi ulang field ini setelah diubah — baik sudah disentuh maupun belum
-    // Ini fix untuk card selector yang langsung setField + markTouched bersamaan
+    setValues((prev) => ({ ...prev, [key]: value }));
     setTouched((prev) => ({ ...prev, [key]: true }));
-    const errs = validateBriefForm(next);
-    setErrors((prev) => ({ ...prev, [key]: errs[key] ?? undefined }));
   };
 
   const markTouched = (key: keyof BriefFormValues) => {
-    if (!touched[key]) {
-      setTouched((prev) => ({ ...prev, [key]: true }));
-      // Validasi saat blur — pakai values yang sudah di-set
-      setErrors((prev) => {
-        const errs = validateBriefForm(values);
-        return { ...prev, [key]: errs[key] };
-      });
-    }
+    setTouched((prev) => ({ ...prev, [key]: true }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitAttempted(true);
 
-    // Mark semua field sebagai touched
-    const allTouched = Object.keys(values).reduce(
-      (acc, k) => ({ ...acc, [k]: true }),
-      {} as Record<keyof BriefFormValues, boolean>
-    );
-    setTouched(allTouched);
-
-    // Validasi penuh
     const errs = validateBriefForm(values);
-    setErrors(errs);
-
     const hasError = Object.keys(errs).length > 0;
     if (hasError) {
-      // Fokus ke field pertama yang error
       const firstErrKey = Object.keys(errs)[0] as keyof BriefFormValues;
       document.getElementById(id(firstErrKey))?.focus();
       return;
@@ -659,7 +647,7 @@ export function BriefForm() {
         )}
 
         {/* Validasi error summary — hanya tampil kalau ada error NYATA setelah submit */}
-        {Object.keys(errors).length > 0 && Object.values(touched).some(Boolean) && (
+        {Object.keys(allErrors).length > 0 && submitAttempted && (
           <div
             role="alert"
             aria-live="polite"
@@ -671,7 +659,7 @@ export function BriefForm() {
               fontFamily: "var(--font-poppins)",
             }}
           >
-            Ada {Object.keys(errors).length} field yang perlu diisi sebelum lanjut.
+            Ada {Object.keys(allErrors).length} field yang perlu diisi sebelum lanjut.
           </div>
         )}
 
