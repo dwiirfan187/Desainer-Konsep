@@ -137,21 +137,23 @@ export function BriefForm() {
 
   // Field setters
   const setField = <K extends keyof BriefFormValues>(key: K, value: BriefFormValues[K]) => {
-    setValues((prev) => ({ ...prev, [key]: value }));
-    // Validasi live setelah field pernah disentuh
-    if (touched[key]) {
-      const next = { ...values, [key]: value };
-      const errs = validateBriefForm(next);
-      setErrors((prev) => ({ ...prev, [key]: errs[key] }));
-    }
+    const next = { ...values, [key]: value };
+    setValues(next);
+    // Selalu validasi ulang field ini setelah diubah — baik sudah disentuh maupun belum
+    // Ini fix untuk card selector yang langsung setField + markTouched bersamaan
+    setTouched((prev) => ({ ...prev, [key]: true }));
+    const errs = validateBriefForm(next);
+    setErrors((prev) => ({ ...prev, [key]: errs[key] ?? undefined }));
   };
 
   const markTouched = (key: keyof BriefFormValues) => {
     if (!touched[key]) {
       setTouched((prev) => ({ ...prev, [key]: true }));
-      // Validasi saat blur
-      const errs = validateBriefForm(values);
-      setErrors((prev) => ({ ...prev, [key]: errs[key] }));
+      // Validasi saat blur — pakai values yang sudah di-set
+      setErrors((prev) => {
+        const errs = validateBriefForm(values);
+        return { ...prev, [key]: errs[key] };
+      });
     }
   };
 
